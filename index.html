@@ -1,0 +1,306 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>J2 Dashboard - Dark Mode</title>
+    <style>
+        /* === BIẾN MÀU CHO DARK MODE === */
+        :root {
+            --bg-color: #121212;        /* Nền chính (đen) */
+            --panel-bg: #1e1e1e;        /* Nền của từng khung (xám tối) */
+            --text-main: #e0e0e0;       /* Chữ chính (trắng xám) */
+            --text-muted: #9e9e9e;      /* Chữ phụ (xám) */
+            --border-color: #333333;    /* Đường viền */
+            --accent-color: #4fc3f7;    /* Màu nhấn (xanh sáng) */
+        }
+
+        body { 
+            margin: 0; 
+            background-color: var(--bg-color); 
+            color: var(--text-main); 
+            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; 
+            overflow: hidden; 
+        }
+
+        .panel { 
+            display: none; 
+            width: 100vw; 
+            height: 100vh; 
+            box-sizing: border-box; 
+            padding: 20px 40px; 
+            background: var(--panel-bg);
+        }
+        .panel.active { display: block; }
+
+        /* ================= GIAO DIỆN MAIL (DARK MODE) ================= */
+        .mail-header {
+            font-size: 20px;
+            font-weight: bold;
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid var(--accent-color);
+            display: inline-block;
+            color: var(--text-main);
+        }
+        .mail-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 16px;
+        }
+        .mail-table tr {
+            border-bottom: 1px solid var(--border-color);
+            height: 55px;
+        }
+        /* Đổi màu nền xen kẽ cho dễ nhìn trong tối */
+        .mail-table tr:nth-child(even) { background-color: #252525; }
+        .mail-table td { padding: 10px; vertical-align: middle; }
+        .mail-sender { 
+            width: 250px; 
+            font-weight: bold; 
+            color: var(--accent-color); /* Tên người gửi màu xanh cho nổi bật */
+            white-space: nowrap; 
+            overflow: hidden; 
+            text-overflow: ellipsis;
+        }
+        .mail-subject { 
+            color: var(--text-main); 
+            white-space: nowrap; 
+            overflow: hidden; 
+            text-overflow: ellipsis;
+        }
+        .mail-date { 
+            width: 100px; 
+            text-align: right; 
+            font-weight: bold; 
+            color: var(--text-muted); 
+            font-size: 14px;
+        }
+        .loading { font-size: 18px; color: var(--text-muted); font-style: italic; }
+
+        /* ================= GIAO DIỆN THỜI TIẾT (DARK MODE) ================= */
+        .weather-container {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            height: 100%;
+            padding: 0 50px;
+        }
+        .weather-current {
+            display: flex;
+            align-items: center;
+            gap: 30px;
+            margin-bottom: 30px;
+        }
+        .weather-temp {
+            font-size: 80px;
+            font-weight: bold;
+            color: var(--text-main);
+            margin: 0;
+            line-height: 1;
+        }
+        .weather-desc {
+            font-size: 24px;
+            color: var(--accent-color);
+        }
+        .weather-details {
+            font-size: 18px;
+            color: var(--text-muted);
+            margin-top: 5px;
+        }
+        .weather-forecast {
+            display: flex;
+            gap: 20px;
+            margin-top: 20px;
+            border-top: 1px solid var(--border-color);
+            padding-top: 20px;
+        }
+        .forecast-card {
+            background: #2a2a2a;
+            padding: 15px 25px;
+            border-radius: 12px;
+            text-align: center;
+            flex: 1;
+        }
+        .forecast-date { font-size: 16px; color: var(--text-muted); margin-bottom: 10px; }
+        .forecast-temp { font-size: 22px; font-weight: bold; color: var(--text-main); }
+        
+        /* ================= THÔNG TIN KHÁC ================= */
+        #panel-info {
+            display: none; /* Sẽ được JS bật lên */
+            background: #000000;
+            padding: 30px;
+        }
+        #panel-info.active { display: block; }
+        .info-list { margin-top: 20px; }
+        .info-item { border-bottom: 1px solid var(--border-color); padding: 15px 0; }
+        .info-meta { font-size: 14px; color: var(--accent-color); margin-bottom: 5px; }
+        .info-text { font-size: 18px; line-height: 1.5; color: var(--text-main); }
+    </style>
+</head>
+<body>
+
+    <!-- Màn hình 1: Hộp thư (20 giây) -->
+    <div id="panel-mail" class="panel active">
+        <div class="mail-header">📬 Hộp thư đến</div>
+        <table class="mail-table">
+            <tbody id="mail-list">
+                <tr><td colspan="3" class="loading">Đang tải email...</td></tr>
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Màn hình 2: Thời tiết (10 giây) - Tự vẽ bằng API -->
+    <div id="panel-weather" class="panel">
+        <div class="weather-container" id="weather-data">
+            <div class="loading">Đang tải thời tiết...</div>
+        </div>
+    </div>
+
+    <!-- Màn hình 3: Thông báo Classroom (10 giây) -->
+    <div id="panel-info" class="panel">
+        <h2 style="color: var(--accent-color); margin-top: 0;">📢 Thông báo Classroom</h2>
+        <div id="classroom-list" class="info-list">
+            <div class="loading">Đang tải thông báo...</div>
+        </div>
+    </div>
+
+    <script>
+        // ==== CẤU HÌNH CHUYỂN ĐỔI ====
+        const panels = ['panel-mail', 'panel-weather', 'panel-info'];
+        const durations = [20000, 10000, 10000];
+        let currentIndex = 0;
+
+        function showPanel(index) {
+            document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+            document.getElementById(panels[index]).classList.add('active');
+            if(panels[index] === 'panel-mail') window.scrollTo(0,0);
+        }
+
+        function cycle() {
+            showPanel(currentIndex);
+            const nextIndex = (currentIndex + 1) % panels.length;
+            setTimeout(() => {
+                currentIndex = nextIndex;
+                cycle();
+            }, durations[currentIndex]);
+        }
+
+        // ==== 1. LẤY DỮ LIỆU MAIL ====
+        // DÁN URL WEB APP MAIL VÀO ĐÂY:
+        const MAIL_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzJGbpHxopL9P75m2CFVABmlulrOpxGTHYjTQjjLiD52nr2zawn2H0iVwsddWa5HM4/exec";
+
+        async function fetchMails() {
+            try {
+                const response = await fetch(MAIL_SCRIPT_URL);
+                const data = await response.json();
+                const tbody = document.getElementById('mail-list');
+                tbody.innerHTML = '';
+
+                data.forEach(mail => {
+                    const tr = document.createElement('tr');
+                    let senderName = mail.sender.split('<')[0].replace(/"/g, '').trim();
+                    if(senderName.length === 0) senderName = mail.sender;
+
+                    tr.innerHTML = `
+                        <td class="mail-sender">${senderName}</td>
+                        <td class="mail-subject">${mail.subject}</td>
+                        <td class="mail-date">${mail.date}</td>
+                    `;
+                    tbody.appendChild(tr);
+                });
+            } catch (error) {
+                document.getElementById('mail-list').innerHTML = '<tr><td colspan="3" class="loading">Lỗi tải dữ liệu mail.</td></tr>';
+            }
+        }
+
+        // ==== 2. LẤY DỮ LIỆU THỜI TIẾT (OPEN-METEO) ====
+        // Không cần API key, tự động lấy thời tiết TP.HCM
+        async function fetchWeather() {
+            const container = document.getElementById('weather-data');
+            try {
+                const res = await fetch("https://api.open-meteo.com/v1/forecast?latitude=10.8231&longitude=106.6297&current=temperature_2m,relative_humidity_2m,weather_code&daily=weather_code,temperature_2m_max,temperature_2m_min&timezone=Asia%2FHo_Chi_Minh&forecast_days=3");
+                const data = await res.json();
+                
+                const current = data.current;
+                const daily = data.daily;
+                
+                // Hàm chuyển mã thời tiết thành chữ (đơn giản hóa)
+                const getWeatherDesc = (code) => {
+                    if (code === 0) return "Trời quang";
+                    if (code >= 1 && code <= 3) return "Có mây";
+                    if (code >= 51 && code <= 67) return "Mưa rào";
+                    if (code >= 80 && code <= 82) return "Mưa lớn";
+                    if (code >= 95) return "Dông bão";
+                    return "Thời tiết ổn định";
+                };
+
+                let html = `
+                    <div class="weather-current">
+                        <div>
+                            <p class="weather-temp">${current.temperature_2m}°C</p>
+                            <div class="weather-desc">${getWeatherDesc(current.weather_code)}</div>
+                            <div class="weather-details">Độ ẩm: ${current.relative_humidity_2m}%</div>
+                        </div>
+                    </div>
+                    <h3 style="color: var(--text-muted); font-weight: normal; margin-bottom: 10px;">Dự báo 3 ngày tới</h3>
+                    <div class="weather-forecast">
+                `;
+                
+                for (let i = 0; i < daily.time.length; i++) {
+                    html += `
+                        <div class="forecast-card">
+                            <div class="forecast-date">${daily.time[i].split('-').reverse().join('/')}</div>
+                            <div class="forecast-temp">${daily.temperature_2m_min[i]}° - ${daily.temperature_2m_max[i]}°</div>
+                        </div>
+                    `;
+                }
+                html += `</div>`;
+                container.innerHTML = html;
+            } catch (e) {
+                container.innerHTML = '<div class="loading">Không tải được thời tiết.</div>';
+            }
+        }
+
+        // ==== 3. LẤY DỮ LIỆU CLASSROOM ====
+        // DÁN URL WEB APP CLASSROOM VÀO ĐÂY:
+        const CLASSROOM_URL = "https://script.google.com/macros/s/AKfycbxcYatVESdKIOBdOOVjQ85uPhZhWn4jnqWktptY_L2gh1g6lwKPDJhtDUCqCy1pEnKe/exec";
+
+        async function fetchClassroom() {
+            const container = document.getElementById('classroom-list');
+            try {
+                const res = await fetch(CLASSROOM_URL);
+                const data = await res.json();
+
+                if (data.length === 0) {
+                    container.innerHTML = '<div class="loading">Không có thông báo mới.</div>';
+                    return;
+                }
+
+                let html = '';
+                data.forEach(item => {
+                    html += `
+                    <div class="info-item">
+                        <div class="info-meta">${item.courseName} · ${item.time}</div>
+                        <div class="info-text">${item.text.length > 100 ? item.text.substring(0, 100) + '...' : item.text}</div>
+                    </div>`;
+                });
+                container.innerHTML = html;
+            } catch (e) {
+                container.innerHTML = '<div class="loading">Không tải được thông báo.</div>';
+            }
+        }
+
+        // Khởi chạy tất cả
+        fetchMails();
+        fetchWeather();
+        fetchClassroom();
+        cycle();
+        
+        // Tự động làm mới dữ liệu định kỳ
+        setInterval(fetchMails, 5 * 60 * 1000); // 5 phút
+        setInterval(fetchWeather, 30 * 60 * 1000); // 30 phút
+        setInterval(fetchClassroom, 10 * 60 * 1000); // 10 phút
+    </script>
+</body>
+</html>
