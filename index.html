@@ -216,14 +216,18 @@
 
         // ==== 2. LẤY DỮ LIỆU THỜI TIẾT (OPEN-METEO) ====
         // Không cần API key, tự động lấy thời tiết TP.HCM
-        async function fetchWeather() {
-            const container = document.getElementById('weather-data');
-            try {
-                const res = await fetch("https://api.open-meteo.com/v1/forecast?latitude=10.8231&longitude=106.6297&current=temperature_2m,relative_humidity_2m,weather_code&daily=weather_code,temperature_2m_max,temperature_2m_min&timezone=Asia%2FHo_Chi_Minh&forecast_days=3");
-                const data = await res.json();
-                
-                const current = data.current;
-                const daily = data.daily;
+        const widget = new window.WeatherWidget({
+  locations: [{ lat: 10.8231, lon: 106.6297, name: "TP. Hồ Chí Minh" }],
+  layout: "card",
+  theme: "dark",
+  units: "metric",
+  modules: {
+    current: true,
+    hourly: { enabled: false },
+    daily: { enabled: false }
+  }
+});
+widget.mount("#weather-widget");
                 
                 // Hàm chuyển mã thời tiết thành chữ (đơn giản hóa)
                 const getWeatherDesc = (code) => {
