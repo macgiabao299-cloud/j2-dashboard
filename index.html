@@ -210,55 +210,27 @@
         }
 
         // ==== 2. LẤY DỮ LIỆU THỜI TIẾT (OPEN-METEO API) ====
-        async function fetchWeather() {
-            const container = document.getElementById('weather-data');
-            try {
-                // Gọi API Open-Meteo
-                const res = await fetch("https://api.open-meteo.com/v1/forecast?latitude=10.8231&longitude=106.6297&current=temperature_2m,relative_humidity_2m,weather_code&daily=weather_code,temperature_2m_max,temperature_2m_min&timezone=Asia%2FHo_Chi_Minh&forecast_days=3");
-                const data = await res.json();
-                
-                const current = data.current;
-                const daily = data.daily;
-                
-                // Hàm dịch mã thời tiết
-                const getWeatherDesc = (code) => {
-                    if (code === 0) return "Trời quang";
-                    if (code >= 1 && code <= 3) return "Có mây";
-                    if (code >= 51 && code <= 67) return "Mưa rào";
-                    if (code >= 80 && code <= 82) return "Mưa lớn";
-                    if (code >= 95) return "Dông bão";
-                    return "Thời tiết ổn định";
-                };
-
-                let html = `
-                    <div class="weather-current">
-                        <div>
-                            <p class="weather-temp">${Math.round(current.temperature_2m)}°C</p>
-                            <div class="weather-desc">${getWeatherDesc(current.weather_code)}</div>
-                            <div class="weather-details">Độ ẩm: ${current.relative_humidity_2m}% | TP. Hồ Chí Minh</div>
-                        </div>
-                    </div>
-                    <h3 style="color: var(--text-muted); font-weight: normal; margin-bottom: 10px;">Dự báo 3 ngày tới</h3>
-                    <div class="weather-forecast">
-                `;
-                
-                for (let i = 0; i < daily.time.length; i++) {
-                    let dateParts = daily.time[i].split('-');
-                    let dateStr = dateParts[2] + '/' + dateParts[1];
-                    html += `
-                        <div class="forecast-card">
-                            <div class="forecast-date">Ngày ${dateStr}</div>
-                            <div class="forecast-temp">${Math.round(daily.temperature_2m_min[i])}° - ${Math.round(daily.temperature_2m_max[i])}°</div>
-                        </div>
-                    `;
-                }
-                html += `</div>`;
-                container.innerHTML = html;
-            } catch (e) {
-                container.innerHTML = '<div class="loading">Không tải được thời tiết. Vui lòng kiểm tra mạng J2.</div>';
-                console.error("Lỗi thời tiết:", e);
-            }
-        }
+       async function fetchWeather() {
+    const container = document.getElementById('weather-data');
+    try {
+        // wttr.in hỗ trợ trả về JSON, format=j1
+        const res = await fetch("https://wttr.in/Ho+Chi+Minh?format=j1");
+        const data = await res.json();
+        const current = data.current_condition[0];
+        
+        container.innerHTML = `
+            <div class="weather-current">
+                <div>
+                    <p class="weather-temp">${current.temp_C}°C</p>
+                    <div class="weather-desc">${current.weatherDesc[0].value}</div>
+                    <div class="weather-details">Độ ẩm: ${current.humidity}% | TP. Hồ Chí Minh</div>
+                </div>
+            </div>
+        `;
+    } catch (e) {
+        container.innerHTML = '<div class="loading">Không tải được thời tiết (wttr.in).</div>';
+    }
+}
 
         // ==== 3. LẤY DỮ LIỆU CLASSROOM ====
         // DÁN URL WEB APP CLASSROOM VÀO ĐÂY:
